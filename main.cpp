@@ -21,7 +21,7 @@ bool testIPConnectivity(const std::string& ip) {
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(80);  // 测试 80 端口的连通性，您可以根据需要修改
+	addr.sin_port = htons(443);  // 测试443端口的连通性
 
 	if (inet_pton(AF_INET, ip.c_str(), &(addr.sin_addr)) <= 0) {
 		std::cerr << "ERROR：Invalid IP address" << std::endl;
