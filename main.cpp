@@ -6,7 +6,7 @@
 #include <ws2tcpip.h>
 #include <filesystem>
 
-#pragma comment(lib, "Ws2_32.lib") // 链接 Windows 套接字库
+#pragma comment(lib, "Ws2_32.lib") // 链接Windows套接字库
 
 using namespace std;
 
@@ -27,7 +27,7 @@ vector<string> getIPs(const string& domain) {
 	}
 
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;    // 支持 IPv4 和 IPv6
+	hints.ai_family = AF_UNSPEC;    // 支持IPv4和IPv6
 	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 
 	int status = getaddrinfo(domain.c_str(), nullptr, &hints, &res);
@@ -53,7 +53,7 @@ vector<string> getIPs(const string& domain) {
 		// 转换IP地址为字符串格式
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
 
-		// 创建一个 socket
+		// 创建一个socket
 		SOCKET sock = socket(p->ai_family, SOCK_STREAM, 0);
 		if (sock == INVALID_SOCKET) {
 			cerr << "Socket 创建失败: " << WSAGetLastError() << endl;
@@ -65,7 +65,7 @@ vector<string> getIPs(const string& domain) {
 		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
 		setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
 
-		// 设置端口号为 80
+		// 设置端口号为80
 		if (p->ai_family == AF_INET) {
 			((struct sockaddr_in*)p->ai_addr)->sin_port = htons(80);
 		}
@@ -76,16 +76,16 @@ vector<string> getIPs(const string& domain) {
 		// 尝试连接，设置超时时间
 		bool connected = (connect(sock, p->ai_addr, p->ai_addrlen) == 0);
 
-		// 关闭 socket
+		// 关闭socket
 		closesocket(sock);
 
-		// 将结果保存到 ips 矢量中
+		// 将结果保存到ips矢量中
 		string result = string(ipstr) + "      \t" + (connected ? "连接成功" : "错误：无法连接");
 		ips.push_back(result);
 	}
 
 	freeaddrinfo(res); // 释放结果链表
-	WSACleanup();      // 清理 Winsock
+	WSACleanup();      // 清理Winsock
 	return ips;
 }
 
