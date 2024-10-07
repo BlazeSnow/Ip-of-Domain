@@ -1,76 +1,100 @@
-﻿// Copyright (C) 2024 BlazeSnow
-// 保留所有权利
-// 本程序以GNU General Public License v3.0的条款发布
-#include <iostream>
+﻿#include <iostream>
+#include <string>
 #include <vector>
 #include <fstream>
-#include <filesystem>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <filesystem>
+
+#pragma comment(lib, "Ws2_32.lib") // 链接 Windows 套接字库
 
 using namespace std;
 
-#pragma comment(lib, "ws2_32.lib")
+// 设置超时时间（秒）
+const int CONNECT_TIMEOUT = 5;
 
-bool testIPConnectivity(const std::string& ip) {
-	SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sock == INVALID_SOCKET) {
-		std::cerr << "ERROR：Socket creation failed" << std::endl;
-		return false;
-	}
-
-	struct sockaddr_in addr;
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(443);  // 测试443端口的连通性
-
-	if (inet_pton(AF_INET, ip.c_str(), &(addr.sin_addr)) <= 0) {
-		std::cerr << "ERROR：Invalid IP address" << std::endl;
-		closesocket(sock);
-		return false;
-	}
-
-	DWORD startTime = GetTickCount();  // 记录开始时间
-	int result = connect(sock, (struct sockaddr*)&addr, sizeof(addr));
-	DWORD endTime = GetTickCount();    // 记录结束时间
-
-	if (result == SOCKET_ERROR) {
-		std::cerr << "花费时间：" << (endTime - startTime) << "ms    ";
-		closesocket(sock);
-		return false;
-	}
-
-	closesocket(sock);
-	return true;
-}
-
-void getIPAddressesAndTestConnectivity(const std::string& domain) {
+vector<string> getIPs(const string& domain) {
+	vector<string> ips;
 	WSADATA wsaData;
+	struct addrinfo* res = nullptr;
+	struct addrinfo hints;
+	char ipstr[INET6_ADDRSTRLEN];  // 支持IPv4和IPv6
+
+	// 初始化 Winsock
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		std::cerr << "WSAStartup failed" << std::endl;
-		return;
+		cerr << "WSAStartup 失败。" << endl;
+		return ips;
 	}
 
-	struct hostent* host = gethostbyname(domain.c_str());
-	if (host == NULL) {
-		std::cerr << "gethostbyname failed" << std::endl;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;    // 支持 IPv4 和 IPv6
+	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
+
+	int status = getaddrinfo(domain.c_str(), nullptr, &hints, &res);
+	if (status != 0) {
+		cerr << "getaddrinfo 错误: " << gai_strerror(status) << endl;
 		WSACleanup();
-		return;
+		return ips;
 	}
 
-	for (int i = 0; host->h_addr_list[i] != NULL; ++i) {
-		struct in_addr addr;
-		memcpy(&addr, host->h_addr_list[i], sizeof(struct in_addr));
-		std::string ip = inet_ntoa(addr);
-		std::cout << "IP: " << ip << "      \t连通性: ";
-		if (testIPConnectivity(ip)) {
-			std::cout << "成功" << std::endl;
+	for (struct addrinfo* p = res; p != nullptr; p = p->ai_next) {
+		void* addr = nullptr;
+
+		// 获取地址
+		if (p->ai_family == AF_INET) { // IPv4
+			struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
+			addr = &(ipv4->sin_addr);
+		}
+		else { // IPv6
+			struct sockaddr_in6* ipv6 = (struct sockaddr_in6*)p->ai_addr;
+			addr = &(ipv6->sin6_addr);
+		}
+
+		// 转换IP地址为字符串格式
+		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+
+		// 创建一个 socket
+		SOCKET sock = socket(p->ai_family, SOCK_STREAM, 0);
+		if (sock == INVALID_SOCKET) {
+			cerr << "Socket 创建失败: " << WSAGetLastError() << endl;
+			continue;
+		}
+
+		// 设置超时时间
+		DWORD timeout = CONNECT_TIMEOUT * 1000; // 毫秒
+		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+		setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
+
+		// 设置端口号为 80
+		if (p->ai_family == AF_INET) {
+			((struct sockaddr_in*)p->ai_addr)->sin_port = htons(80);
 		}
 		else {
-			std::cout << "失败" << std::endl;
+			((struct sockaddr_in6*)p->ai_addr)->sin6_port = htons(80);
 		}
+
+		// 尝试连接，设置超时时间
+		bool connected = (connect(sock, p->ai_addr, p->ai_addrlen) == 0);
+
+		// 关闭 socket
+		closesocket(sock);
+
+		// 将结果保存到 ips 矢量中
+		string result = string(ipstr) + " - 80端口: " + (connected ? "连接成功" : "无法连接");
+		ips.push_back(result);
 	}
 
-	WSACleanup();
+	freeaddrinfo(res); // 释放结果链表
+	WSACleanup();      // 清理 Winsock
+	return ips;
+}
+
+void getIPAddressesAndTestConnectivity(const string& domain) {
+	vector<string> ips = getIPs(domain);
+
+	for (const auto& ip : ips) {
+		cout << ip << endl;
+	}
 }
 
 int main() {
@@ -89,19 +113,20 @@ int main() {
 		while (!file.eof()) {
 			string read;
 			file >> read;
-			domains.push_back(read);
+			if (!read.empty()) {
+				domains.push_back(read);
+			}
 		}
 		file.close();
 	}
 	else {
-		file.close();
 		fstream file("Ip_of_Domain.txt", ios::out);
 		if (file.is_open()) {
 			vector<string> domains_output = { "api.onedrive.com",
 				"chi01pap001.storage.live.com",
 				"d.docs.live.net"
 			};
-			for (const auto i : domains_output) {
+			for (const auto& i : domains_output) {
 				file << i << endl;
 			}
 			cout << "创建文件\"Ip_of_Domain.txt\"成功" << endl;
@@ -113,9 +138,9 @@ int main() {
 	}
 
 	for (const auto& domain : domains) {
-		std::cout << domain << "：" << std::endl;
+		cout << domain << "：" << endl;
 		getIPAddressesAndTestConnectivity(domain);
-		std::cout << std::endl;
+		cout << endl;
 	}
 
 	system("pause");
