@@ -6,8 +6,10 @@
 
 #pragma comment(lib, "Ws2_32.lib") // 链接 Windows 套接字库
 
-std::vector<std::string> getIPs(const std::string& domain) {
-	std::vector<std::string> ips;
+using namespace std;
+
+vector<string> getIPs(const string& domain) {
+	vector<string> ips;
 	WSADATA wsaData;
 	struct addrinfo* res = nullptr;
 	struct addrinfo hints;
@@ -15,24 +17,24 @@ std::vector<std::string> getIPs(const std::string& domain) {
 
 	// 初始化 Winsock
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		std::cerr << "WSAStartup failed." << std::endl;
+		cerr << "WSAStartup failed." << endl;
 		return ips;
 	}
 
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;    // 不限定地址族：既支持 IPv4 又支持 IPv6
+	hints.ai_family = AF_UNSPEC;    // 支持 IPv4 和 IPv6
 	hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
 
 	int status = getaddrinfo(domain.c_str(), nullptr, &hints, &res);
 	if (status != 0) {
-		std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
+		cerr << "getaddrinfo: " << gai_strerror(status) << endl;
 		WSACleanup();
 		return ips;
 	}
 
 	for (struct addrinfo* p = res; p != nullptr; p = p->ai_next) {
-		void* addr;
-		std::string ipver;
+		void* addr = nullptr;
+		string ipver;
 
 		// 获取地址，根据地址族区分IPv4和IPv6
 		if (p->ai_family == AF_INET) { // IPv4
@@ -48,7 +50,7 @@ std::vector<std::string> getIPs(const std::string& domain) {
 
 		// 转换IP地址为字符串格式
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		ips.push_back(std::string(ipstr) + " (" + ipver + ")");
+		ips.push_back(string(ipstr) + " (" + ipver + ")");
 	}
 
 	freeaddrinfo(res); // 释放结果链表
@@ -57,12 +59,12 @@ std::vector<std::string> getIPs(const std::string& domain) {
 }
 
 int main() {
-	std::string domain = "blazesnow.com";
-	std::vector<std::string> ips = getIPs(domain);
+	string domain = "example.com";
+	vector<string> ips = getIPs(domain);
 
-	std::cout << "IP addresses for domain " << domain << ":\n";
+	cout << "IP addresses for domain " << domain << ":\n";
 	for (const auto& ip : ips) {
-		std::cout << ip << std::endl;
+		cout << ip << endl;
 	}
 
 	return 0;
