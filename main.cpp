@@ -57,7 +57,7 @@ std::vector<std::string> getIPs(const std::string& domain) {
 }
 
 int main() {
-	std::string domain = "example.com";
+	std::string domain = "blazesnow.com";
 	std::vector<std::string> ips = getIPs(domain);
 
 	std::cout << "IP addresses for domain " << domain << ":\n";
