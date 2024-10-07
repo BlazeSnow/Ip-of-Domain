@@ -10,6 +10,9 @@
 
 using namespace std;
 
+// 设置超时时间（秒）
+const int CONNECT_TIMEOUT = 5;
+
 vector<string> getIPs(const string& domain) {
 	vector<string> ips;
 	WSADATA wsaData;
@@ -19,7 +22,7 @@ vector<string> getIPs(const string& domain) {
 
 	// 初始化 Winsock
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-		cerr << "WSAStartup failed." << endl;
+		cerr << "WSAStartup 失败。" << endl;
 		return ips;
 	}
 
@@ -29,25 +32,22 @@ vector<string> getIPs(const string& domain) {
 
 	int status = getaddrinfo(domain.c_str(), nullptr, &hints, &res);
 	if (status != 0) {
-		cerr << "getaddrinfo: " << gai_strerror(status) << endl;
+		cerr << "getaddrinfo 错误: " << gai_strerror(status) << endl;
 		WSACleanup();
 		return ips;
 	}
 
 	for (struct addrinfo* p = res; p != nullptr; p = p->ai_next) {
 		void* addr = nullptr;
-		string ipver;
 
-		// 获取地址，根据地址族区分IPv4和IPv6
+		// 获取地址
 		if (p->ai_family == AF_INET) { // IPv4
 			struct sockaddr_in* ipv4 = (struct sockaddr_in*)p->ai_addr;
 			addr = &(ipv4->sin_addr);
-			ipver = "IPv4";
 		}
 		else { // IPv6
 			struct sockaddr_in6* ipv6 = (struct sockaddr_in6*)p->ai_addr;
 			addr = &(ipv6->sin6_addr);
-			ipver = "IPv6";
 		}
 
 		// 转换IP地址为字符串格式
@@ -56,9 +56,14 @@ vector<string> getIPs(const string& domain) {
 		// 创建一个 socket
 		SOCKET sock = socket(p->ai_family, SOCK_STREAM, 0);
 		if (sock == INVALID_SOCKET) {
-			cerr << "Socket creation failed: " << WSAGetLastError() << endl;
+			cerr << "Socket 创建失败: " << WSAGetLastError() << endl;
 			continue;
 		}
+
+		// 设置超时时间
+		DWORD timeout = CONNECT_TIMEOUT * 1000; // 毫秒
+		setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+		setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
 
 		// 设置端口号为 80
 		if (p->ai_family == AF_INET) {
@@ -68,14 +73,14 @@ vector<string> getIPs(const string& domain) {
 			((struct sockaddr_in6*)p->ai_addr)->sin6_port = htons(80);
 		}
 
-		// 尝试连接
+		// 尝试连接，设置超时时间
 		bool connected = (connect(sock, p->ai_addr, p->ai_addrlen) == 0);
 
 		// 关闭 socket
 		closesocket(sock);
 
 		// 将结果保存到 ips 矢量中
-		string result = string(ipstr) + " (" + ipver + ") - Port 80: " + (connected ? "Connected" : "Cannot Connect");
+		string result = string(ipstr) + " - 80端口: " + (connected ? "连接成功" : "无法连接");
 		ips.push_back(result);
 	}
 
