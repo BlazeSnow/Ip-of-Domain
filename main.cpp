@@ -80,7 +80,7 @@ vector<string> getIPs(const string& domain) {
 		closesocket(sock);
 
 		// 将结果保存到 ips 矢量中
-		string result = string(ipstr) + " - 80端口: " + (connected ? "连接成功" : "无法连接");
+		string result = string(ipstr) + "      \t" + (connected ? "连接成功" : "错误：无法连接");
 		ips.push_back(result);
 	}
 
