@@ -1,0 +1,26 @@
+name: Release
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - uses: BlazeSnow/release-cpp-action@main
+      with:
+        name: Ip-of-Domain
+        base-dir: .
+        release: true
+        release-body: https://github.com/BlazeSnow/Ip-of-Domain/blob/main/CHANGELOG.md
+        release-name: ${{ github.ref_name }}
+        prerelease: ${{ contains(github.ref_name, '-') }}
+        tag: ${{ github.ref_name }}

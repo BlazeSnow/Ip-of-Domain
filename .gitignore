@@ -1,0 +1,6 @@
+.idea/
+.run/
+*.exe
+*.txt
+!CMakeLists.txt
+cmake-build-*/
