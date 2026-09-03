@@ -86,7 +86,7 @@ void getIPAddressesAndTestConnectivity(const string &domain) {
 }
 
 int main() {
-    system("chcp 54936");
+    system("chcp 65001");
     system("cls");
     printf("Copyright (C) 2024-2026 BlazeSnow.\n");
     printf("https://github.com/BlazeSnow/Ip-of-Domain\n\n");
