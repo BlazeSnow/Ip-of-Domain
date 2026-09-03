@@ -88,10 +88,8 @@ void getIPAddressesAndTestConnectivity(const string &domain) {
 int main() {
     system("chcp 54936");
     system("cls");
-    printf("Copyright (C) 2024-2026 BlazeSnow.保留所有权利。\n");
-    printf("本程序以GNU General Public License v3.0的条款发布。\n");
-    printf("当前程序版本号：v1.0.1\n");
-    printf("https://github.com/BlazeSnow/CppWorkspace\n\n");
+    printf("Copyright (C) 2024-2026 BlazeSnow.\n");
+    printf("https://github.com/BlazeSnow/Ip-of-Domain\n\n");
 
     vector<string> domains;
 
