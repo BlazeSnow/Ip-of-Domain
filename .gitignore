@@ -3,3 +3,4 @@
 *.exe
 *.txt
 !CMakeLists.txt
+cmake-build-*/
